@@ -3,6 +3,8 @@ const yaml = require('js-yaml');
 const fs = require('fs');
 const path = require('path');
 const tempConfigParser = require('temperature-config-parser');
+const { logError, logD } = require('./utils/log');
+const PATHS_CFG = require('./config/paths');
 
 
 class Thermostat {
@@ -25,13 +27,13 @@ class Thermostat {
 
   bindToCommunication() {
     this.comm.events.on('heatingStateChanged', (state) => {
-      Thermostat.logD('heating is', state);
+      logD('heating is', state);
       this.state.heatingOn = state;
     });
     this.comm.events.on('temperatureChanged', (temp, lastUpdate) => {
       this.state.currentTemperature = temp;
       this.state.lastTemperatureUpdate = lastUpdate;
-      Thermostat.logD('temp is', temp, 'updated', lastUpdate);
+      logD('temp is', temp, 'updated', lastUpdate);
     });
     this.comm.events.on('someoneIsHomeUpdate', (state) => {
       this.state.someoneIsHome = state;
@@ -52,7 +54,7 @@ class Thermostat {
   keepTemperature() {
     try {
       this.state.desiredTemperature = this.getDesiredTemperature();
-      Thermostat.logD(`keepTemp@ ${this.state.desiredTemperature} ` +
+      logD(`keepTemp@ ${this.state.desiredTemperature} ` +
         `(${this.state.currentTemperatureProgramName}), ` +
         `cTemp=${this.state.currentTemperature}, ` +
         `heatingOn=${this.state.heatingOn}, ` +
@@ -74,15 +76,15 @@ class Thermostat {
 
       this.logState();
     } catch (err) {
-      Thermostat.logError(err, 'keepTemperature RUN error');
+      logError(err, 'keepTemperature RUN error');
+      return false;
     }
-
     return true;
   }
 
 
   loadConfig() {
-    this.config = yaml.safeLoad(fs.readFileSync(path.join(__dirname, '/config/heating.yml'), 'utf8'));
+    this.config = yaml.safeLoad(fs.readFileSync(path.join(__dirname, PATHS_CFG.HEATING_CONFIG), 'utf8'));
   }
 
   requestInfo() {
@@ -94,7 +96,6 @@ class Thermostat {
   getDesiredTemperature() {
     this.loadConfig();
     const res = tempConfigParser.getProgram(this.config.schedule);
-    console.log(res);
     this.state.desiredTemperature = res.temperature;
     this.state.currentTemperatureProgramName = res.programName;
 
@@ -103,20 +104,8 @@ class Thermostat {
 
   logState() {
     const state = { ...this.state, updatedAt: Date.now() };
-    fs.writeFileSync(path.join(__dirname, '/var/state.json'), JSON.stringify(state, null, 1));
+    fs.writeFileSync(path.join(__dirname, PATHS_CFG.STATE), JSON.stringify(state, null, 1));
     this.comm.logState(state);
-  }
-
-
-  // //////////
-  //  UTILS ///
-  // //////////
-  static logError(error, title) {
-    console.error(title, error);
-  }
-
-  static logD(...args) {
-    console.log(...args);
   }
 }
 
