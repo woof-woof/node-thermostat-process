@@ -37,7 +37,7 @@ class Communication extends CommunicationInterface {
     if (this._lastTempTimestamp === timestamp) return false;
 
     const regex = /Temperature = (\d*.\d*)/;
-    let temp = regex.exec(lines[1]);
+    let temp = regex.exec(lines[lines.length - 1]);
     if (!temp || !temp.length || temp.length < 2) return false;
 
     temp = parseFloat(temp[1]);
