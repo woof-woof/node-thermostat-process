@@ -1,0 +1,13 @@
+{
+  "name": "thermostat",
+  "version": "1.0.0",
+  "description": "Thermostat script agnostic of reading temp & realay control methods;",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "Andrei Ciceu",
+  "license": "ISC",
+  "dependencies": {
+  }
+}
