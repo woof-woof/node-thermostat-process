@@ -1,0 +1,30 @@
+readInterval: 600 # miliseconds between state updates
+keepTempInterval: 600 # miliseconds
+lowThreshold: 0.3 # how many degrees C below desiredTemp to start heating
+highThreshold: 0.4 # how many degrees C over desiredTemp to stop heating
+maxTemp: 26 # not used yet
+minTemp: 14 # not used yet
+
+schedule:
+  temperature:
+    daytime: 20
+    daytimeEmpty: 19
+    night: 18
+  day:
+    workday:
+      - {time: '0:00', temperature: night}
+      - {time: '0:30', temperature: night}
+      - {time: '8:00', temperature: daytimeEmpty}
+      - {time: '17:00', temperature: daytime}
+    weekend:
+      - {time: '0:00', temperature: daytime}
+      - {time: '1:30', temperature: night}
+      - {time: '9:00', temperature: daytime}
+  week:
+    1: workday # Monday
+    2: workday # Tuesday
+    3: workday # ...
+    4: workday
+    5: workday
+    6: weekend # Saturday
+    0: weekend # Sunday

@@ -5,3 +5,4 @@
 /var/logs/*
 /var/state.json
 node_modules
+.git/*

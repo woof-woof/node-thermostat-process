@@ -1,4 +1,5 @@
 const EventEmitter = require('events');
+
 class CommunicationEmitter extends EventEmitter {}
 
 /**
@@ -15,7 +16,7 @@ class CommunicationInterface {
    * CALL _temperatureUpdate(float, [timestamp])
    */
   requestTemp() {
-    //CHANGE THIS
+    // CHANGE THIS
     this._temperatureUpdate(20, new Date());
   }
 
@@ -27,7 +28,7 @@ class CommunicationInterface {
    * CALL _heatingStateUpdate
    */
   requestHeatingState() {
-    //IMPLEMENT THIS
+    // IMPLEMENT THIS
   }
 
   /**
@@ -37,7 +38,7 @@ class CommunicationInterface {
    * preferably from heating relay messaging this
    */
   requestToggleHeating(state) {
-    //IMPLEMENT THIS
+    // IMPLEMENT THIS
   }
 
   /**
@@ -46,7 +47,7 @@ class CommunicationInterface {
    * CALL _someoneIsHomeStatusUpdate
    */
   requestSomeoneIsHome() {
-    //IMPLEMENT THIS
+    // IMPLEMENT THIS
   }
 
   /**
@@ -54,10 +55,8 @@ class CommunicationInterface {
    * log state to database/file/etc
    */
   logState(state) {
-    //maybe IMPLEMENT THIS
+    // maybe IMPLEMENT THIS
   }
-
-
 
 
   // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
@@ -65,22 +64,24 @@ class CommunicationInterface {
     this.events = new CommunicationEmitter();
   }
 
-  //////////////
-  /// EVENTS ///
-  //////////////
+  // ////////////
+  //  EVENTS ///
+  // ///////////
   _heatingStateUpdate(state) {
     this.events.emit('heatingStateChanged', state);
   }
 
   _temperatureUpdate(temp, lastUpdate) {
-    if (typeof temp !== 'number')
-      temp = parseFloat(temp);
-    this.events.emit('temperatureChanged', temp, lastUpdate);
+    let retTemp = temp;
+    if (typeof temp !== 'number') {
+      retTemp = parseFloat(temp);
+    }
+    this.events.emit('temperatureChanged', retTemp, lastUpdate);
   }
 
   _someoneIsHomeStatusUpdate(state) {
     this.events.emit('someoneIsHomeUpdate', state);
   }
-};
+}
 
 module.exports = CommunicationInterface;

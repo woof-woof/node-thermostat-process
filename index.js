@@ -1,2 +1,1 @@
-let thermostat = require('./Thermostat.js');
-module.exports = thermostat;
+module.exports = require('./thermostat.js');

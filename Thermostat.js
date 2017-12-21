@@ -1,104 +1,88 @@
-let _comm = require('./config/communication');
-let yaml = require('js-yaml');
-let fs = require('fs');
+const communication = require('./config/communication');
+const yaml = require('js-yaml');
+const fs = require('fs');
+const path = require('path');
+const tempConfigParser = require('temperature-config-parser');
+
 
 class Thermostat {
+// SETUP
   constructor() {
-    this.desiredTemp = 14;
-    this.cTemp = null;
-    this.lastTempUpdate = null;
-    this.heatingOn = null;
-    this.someoneIsHome = true;
-    this.comm = _comm;
+    this.state = {
+      currentTemperature: null,
+      desiredTemperature: 14,
+      lastTemperatureUpdate: null,
+      currentTemperatureProgramName: null,
+      heatingOn: false,
+      someoneIsHome: false,
+    };
+    this.comm = communication;
     this.config = {};
-
     this.loadConfig();
     this.bindToCommunication();
     this.startRoutines();
   }
 
-/////////////
-/// SETUP ///
-/////////////
   bindToCommunication() {
     this.comm.events.on('heatingStateChanged', (state) => {
-      this.logD('heating is', state);
-      this.heatingOn = state;
+      Thermostat.logD('heating is', state);
+      this.state.heatingOn = state;
     });
     this.comm.events.on('temperatureChanged', (temp, lastUpdate) => {
-      this.cTemp = temp;
-      this.lastTempUpdate = lastUpdate;
-      this.logD('temp is', temp, 'updated', lastUpdate);
+      this.state.currentTemperature = temp;
+      this.state.lastTemperatureUpdate = lastUpdate;
+      Thermostat.logD('temp is', temp, 'updated', lastUpdate);
     });
     this.comm.events.on('someoneIsHomeUpdate', (state) => {
-      this.someoneIsHome = state;
-    })
+      this.state.someoneIsHome = state;
+    });
   }
 
   startRoutines() {
     this.requestInfo();
     this._requestInfoIntreval = setInterval(this.requestInfo.bind(this), this.config.readInterval);
-    this._keepTempInterval = setInterval(this.keepTemperature.bind(this), this.config.keepTempInterval);
+    this._keepTempInterval = setInterval(
+      this.keepTemperature.bind(this),
+      this.config.keepTempInterval,
+    );
   }
 
 
-
-// main temp-keeping routine
+  // main temp-keeping routine
   keepTemperature() {
     try {
-      this.desiredTemp = this.getDesiredTemperature();
-      this.logD(`keepTemp@ ${this.desiredTemp} (${this.currentTempProgramName}), cTemp=${this.cTemp}, heatingOn=${this.heatingOn}, someoneIsHome=${this.someoneIsHome}`);
-      if (!this.cTemp) {
+      this.state.desiredTemperature = this.getDesiredTemperature();
+      Thermostat.logD(`keepTemp@ ${this.state.desiredTemperature} ` +
+        `(${this.state.currentTemperatureProgramName}), ` +
+        `cTemp=${this.state.currentTemperature}, ` +
+        `heatingOn=${this.state.heatingOn}, ` +
+        `someoneIsHome=${this.state.someoneIsHome}`);
+
+      // maintain target temperature
+      if (!this.state.currentTemperature) {
         return console.error('Temperature not yet available');
-      }
-      else if (!this.heatingOn && this.cTemp < this.desiredTemp - this.config.heating.lowThreshold) {
+      } else if (
+        !this.state.heatingOn &&
+        this.state.currentTemperature < this.state.desiredTemperature - this.config.lowThreshold
+      ) {
         this.comm.toggleHeating(true);
-      }
-      else if (this.heatingOn && this.cTemp > this.desiredTemp + this.config.heating.highThreshold) {
+      } else if (
+        this.state.heatingOn &&
+        this.state.currentTemperature > this.state.desiredTemperature + this.config.highThreshold) {
         this.comm.toggleHeating(false);
       }
+
       this.logState();
+    } catch (err) {
+      Thermostat.logError(err, 'keepTemperature RUN error');
     }
-    catch (err) {
-      this.logError(err, "keepTemperature RUN error");
-    }
+
+    return true;
   }
 
 
-
-/////////////
-/// UTILS ///
-/////////////
   loadConfig() {
-    this.config = yaml.safeLoad(fs.readFileSync(__dirname + '/config/config.yml', 'utf8'));
-  }
-
-  logError(error, title) {
-    console.error(title, error);
-  }
-
-  logD() {
-    console.log(...arguments);
-  }
-
-  prettyDate(date) {
-    date = date ? new Date(date) : new Date();
-    return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
-  }
-
-  logState() {
-    let state = {
-      cTemp: this.cTemp,
-      lastTempUpdate: this.lastTempUpdate,
-      desiredTemp: this.desiredTemp,
-      heatingOn: this.heatingOn,
-      someoneIsHome: this.someoneIsHome,
-      currentTempProgramName: this.currentTempProgramName,
-      updatedAt: new Date()
-    };
-    fs.writeFileSync(__dirname + '/var/state.json', JSON.stringify(state, null, 1));
-
-    this.comm.logState(state);
+    this.config = yaml.safeLoad(fs.readFileSync(path.join(__dirname, '/config/heating.yml'), 'utf8'));
   }
 
   requestInfo() {
@@ -109,56 +93,32 @@ class Thermostat {
 
   getDesiredTemperature() {
     this.loadConfig();
-    try {
-      let programName = this.getActiveProgramName();
-      let program = this.config.heating.tempPrograms[programName];
-      this.currentTempProgramName = programName;
-      if (program.tempIfEmpty && !this.someoneIsHome) {
-        return parseFloat(program.tempIfEmpty);
-      }
-      return parseFloat(program.temp);
-    }
-    catch (err) {
-      this.logError(err, "Failed to get desired temperature");
-    }
+    const res = tempConfigParser.getProgram(this.config.schedule);
+    console.log(res);
+    this.state.desiredTemperature = res.temperature;
+    this.state.currentTemperatureProgramName = res.programName;
+
+    return res.temperature;
+  }
+
+  logState() {
+    const state = { ...this.state, updatedAt: Date.now() };
+    fs.writeFileSync(path.join(__dirname, '/var/state.json'), JSON.stringify(state, null, 1));
+    this.comm.logState(state);
   }
 
 
-  getActiveProgramName() {
-    let cDate = new Date();
-    let weekDay = cDate.getDay();
-    let hour = cDate.getHours();
-    let minute = cDate.getMinutes();
-    let dayProgramKey = this.config.heating.weekProgram[weekDay];
-    let dayProgram = this.config.heating.dayPrograms[dayProgramKey];
+  // //////////
+  //  UTILS ///
+  // //////////
+  static logError(error, title) {
+    console.error(title, error);
+  }
 
-    //find the active tempProgram in current dayProgram
-    let programs = [];
-    for (let startTime_c in dayProgram) {
-      if (dayProgram.hasOwnProperty(startTime_c)) {
-        let startTime = startTime_c.split(':');
-        programs.push({
-          hour: parseInt(startTime[0]),
-          minute: parseInt(startTime[1]),
-          name: dayProgram[startTime_c]
-        });
-      }
-    }
-    programs.sort( (a, b) => a.hour * 60 + a.minute - b.hour * 60 - b.minute);
-    // this.logD('today\'s programs', programs);
-    let tempProgramIndex = programs.length - 1;
-    for (let i = 0; i < programs.length; i++) {
-      if (hour < programs[i].hour || ( hour == programs[i].hour && minute <= programs[i].minute)) {
-        tempProgramIndex = i - 1;
-        break;
-      }
-    }
-    if (tempProgramIndex < 0) tempProgramIndex = programs.length - 1;
-    return programs[tempProgramIndex].name;
+  static logD(...args) {
+    console.log(...args);
   }
 }
 
 
-
-var thermostat = new Thermostat();
-module.exports = thermostat;
+module.exports = new Thermostat();

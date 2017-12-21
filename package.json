@@ -9,5 +9,14 @@
   "author": "Andrei Ciceu",
   "license": "ISC",
   "dependencies": {
+    "js-yaml": "^3.10.0",
+    "mqtt": "^2.15.0",
+    "temperature-config-parser": "git+https://github.com/woof-woof/temperature-config-parser.git"
+  },
+  "devDependencies": {
+    "babel-eslint": "^8.0.3",
+    "eslint": "^4.13.1",
+    "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-plugin-import": "^2.8.0"
   }
 }
