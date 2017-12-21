@@ -1,8 +1,5 @@
-/config/parameters.js
-/temp-reading/dht11/wiringPi/*
-/temp-reading/dht11/read-dht11
-/temp-reading/dht22/read-dht22
 /var/logs/*
 /var/state.json
+/config/communication/*
 node_modules
 .git/*

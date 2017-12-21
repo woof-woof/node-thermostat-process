@@ -10,7 +10,6 @@
   "license": "ISC",
   "dependencies": {
     "js-yaml": "^3.10.0",
-    "mqtt": "^2.15.0",
     "temperature-config-parser": "git+https://github.com/woof-woof/temperature-config-parser.git"
   },
   "devDependencies": {

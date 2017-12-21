@@ -1,14 +1,16 @@
 # Node Thermostat
-NodeJS thermostat, agnostic of: reading temperature, toggling heating & scheduling.
+NodeJS thermostat, agnostic of: reading temperature, toggling heating.
 
 ## Installation
 Run `npm install`
 
-create/edit `config/communication.js` appropiate for your environment
-edit config.yml according to your needs
+create `config/communication.js` or `config/communication/index.j` appropiate for your environment.
+For example, use `https://github.com/andreiciceu/thermostat-dht22-mqtt-communication-interface` for a DHT sensor connected to RaspberryPI
+
+edit heating.yml according to your needs
+
 
 test if running correctly with `node index.js`
-logs are stored in `/var/logs/state.log` at every keepTemp run if `logging` is set to `true` in config.yml
 
 ### Setup as a service using PM2
 https://github.com/Unitech/pm2

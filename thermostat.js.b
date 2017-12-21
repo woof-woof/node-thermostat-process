@@ -21,14 +21,14 @@ class Thermostat {
     this.comm = communication;
     this.config = {};
     this.loadConfig();
-    this.bindToCommunication();
+    this.bindCommunication();
     this.startRoutines();
   }
 
-  bindToCommunication() {
+  bindCommunication() {
     this.comm.events.on('heatingStateChanged', (state) => {
-      logD('heating is', state);
       this.state.heatingOn = state;
+      logD('heating is', state);
     });
     this.comm.events.on('temperatureChanged', (temp, lastUpdate) => {
       this.state.currentTemperature = temp;
