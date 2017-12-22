@@ -19,7 +19,7 @@ test if running correctly with `node index.js`
 https://github.com/Unitech/pm2  
 install pm2 process manager with `npm install pm2 -g`  
 `pm2 startup` & follow instructions  
-`pm2 start index.js`  
+`pm2 start index.js --name "thermostat"`  
 `pm2 save`  
 
 Check state of processes with `pm2 list`  
