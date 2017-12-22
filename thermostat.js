@@ -43,10 +43,12 @@ class Thermostat {
   startRoutines() {
     this.requestInfo();
     this._requestInfoIntreval = setInterval(this.requestInfo.bind(this), this.config.readInterval);
+    this.requestInfo();
     this._keepTempInterval = setInterval(
       this.keepTemperature.bind(this),
       this.config.keepTempInterval,
     );
+    setTimeout(this.keepTemperature.bind(this), 3000);
   }
 
 
@@ -103,7 +105,7 @@ class Thermostat {
   }
 
   logState() {
-    const state = { ...this.state, updatedAt: Date.now() };
+    const state = { ...this.state, updatedAt: new Date() };
     fs.writeFileSync(path.join(__dirname, PATHS_CFG.STATE), JSON.stringify(state, null, 1));
     this.comm.logState(state);
   }

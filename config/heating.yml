@@ -1,5 +1,5 @@
-readInterval: 600 # miliseconds between state updates
-keepTempInterval: 600 # miliseconds
+readInterval: 60000 # miliseconds between state updates
+keepTempInterval: 60000 # miliseconds
 lowThreshold: 0.3 # how many degrees C below desiredTemp to start heating
 highThreshold: 0.4 # how many degrees C over desiredTemp to stop heating
 maxTemp: 26 # not used yet
