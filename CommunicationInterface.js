@@ -56,6 +56,15 @@ class CommunicationInterface {
    */
   logState(state) {
     // maybe IMPLEMENT THIS
+    console.log('state update', state);
+  }
+
+  /**
+  * @IMPLEMENT
+  */
+  logError(title, error) {
+    // maybe implement this
+    console.warn(title, error);
   }
 
 

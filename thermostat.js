@@ -3,12 +3,12 @@ const yaml = require('js-yaml');
 const fs = require('fs');
 const path = require('path');
 const tempConfigParser = require('temperature-config-parser');
-const { logError, logD } = require('./utils/log');
+const { logD } = require('./utils/log');
 const PATHS_CFG = require('./config/paths');
 
 
 class Thermostat {
-// SETUP
+  // SETUP
   constructor() {
     this.state = {
       currentTemperature: null,
@@ -50,40 +50,7 @@ class Thermostat {
     );
     setTimeout(this.keepTemperature.bind(this), 3000);
   }
-
-
-  // main temp-keeping routine
-  keepTemperature() {
-    try {
-      this.state.desiredTemperature = this.getDesiredTemperature();
-      logD(`keepTemp@ ${this.state.desiredTemperature} ` +
-        `(${this.state.currentTemperatureProgramName}), ` +
-        `cTemp=${this.state.currentTemperature}, ` +
-        `heatingOn=${this.state.heatingOn}, ` +
-        `someoneIsHome=${this.state.someoneIsHome}`);
-
-      // maintain target temperature
-      if (!this.state.currentTemperature) {
-        return console.error('Temperature not yet available');
-      } else if (
-        !this.state.heatingOn &&
-        this.state.currentTemperature < this.state.desiredTemperature - this.config.lowThreshold
-      ) {
-        this.comm.toggleHeating(true);
-      } else if (
-        this.state.heatingOn &&
-        this.state.currentTemperature > this.state.desiredTemperature + this.config.highThreshold) {
-        this.comm.toggleHeating(false);
-      }
-
-      this.logState();
-    } catch (err) {
-      logError(err, 'keepTemperature RUN error');
-      return false;
-    }
-    return true;
-  }
-
+  // END OF SETUP
 
   loadConfig() {
     this.config = yaml.safeLoad(fs.readFileSync(path.join(__dirname, PATHS_CFG.HEATING_CONFIG), 'utf8'));
@@ -104,10 +71,46 @@ class Thermostat {
     return res.temperature;
   }
 
+  /*
+   * Log state to state file & call communication logState
+   */
   logState() {
     const state = { ...this.state, updatedAt: new Date() };
     fs.writeFileSync(path.join(__dirname, PATHS_CFG.STATE), JSON.stringify(state, null, 1));
     this.comm.logState(state);
+  }
+
+
+  // temp-keeping routine
+  keepTemperature() {
+    try {
+      this.state.desiredTemperature = this.getDesiredTemperature();
+      logD(`keepTemp@ ${this.state.desiredTemperature} ` +
+        `(${this.state.currentTemperatureProgramName}), ` +
+        `cTemp=${this.state.currentTemperature}, ` +
+        `heatingOn=${this.state.heatingOn}, ` +
+        `someoneIsHome=${this.state.someoneIsHome}`);
+
+      // maintain target temperature
+      if (!this.state.currentTemperature) {
+        return this.comm.logError('Temperature not yet available');
+      } else if (
+        !this.state.heatingOn &&
+        this.state.currentTemperature < this.state.desiredTemperature - this.config.lowThreshold
+      ) {
+        this.comm.toggleHeating(true);
+      } else if (
+        this.state.heatingOn &&
+        this.state.currentTemperature > this.state.desiredTemperature + this.config.highThreshold) {
+        this.comm.toggleHeating(false);
+      }
+
+      this.logState();
+    } catch (err) {
+      this.comm.logError('keepTemperature RUN error', err);
+      return false;
+    }
+    return true;
   }
 }
 
