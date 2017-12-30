@@ -126,7 +126,7 @@ class Thermostat {
       this.comm.logError('keepTemperature RUN error', err);
     }
 
-    if (this.runOnlyOnce) this.comm.closeConnections();
+    if (this.runOnlyOnce) setTimeout(() => this.comm.closeConnections(), 1000);
   }
 }
 
