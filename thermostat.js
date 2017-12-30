@@ -3,7 +3,6 @@ const yaml = require('js-yaml');
 const fs = require('fs');
 const path = require('path');
 const tempConfigParser = require('temperature-config-parser');
-const { logD } = require('./utils/log');
 const PATHS_CFG = require('./config/paths');
 
 
@@ -30,13 +29,13 @@ class Thermostat {
   bindCommunication() {
     this.comm.events.on('heatingStateChanged', (state) => {
       this.state.heatingOn = state;
-      logD('heating is', state);
+      this.comm.logDebug('heating is', state);
       if (this.runOnlyOnce) this.tryKeepTemperature();
     });
     this.comm.events.on('temperatureChanged', (temp, lastUpdate) => {
       this.state.currentTemperature = temp;
       this.state.lastTemperatureUpdate = lastUpdate;
-      logD('temp is', temp, 'updated', lastUpdate);
+      this.comm.logDebug('temp is', temp, 'updated', lastUpdate);
       if (this.runOnlyOnce) this.tryKeepTemperature();
     });
     this.comm.events.on('someoneIsHomeUpdate', (state) => {
@@ -92,6 +91,7 @@ class Thermostat {
   tryKeepTemperature() {
     if (this.state.currentTemperature !== null && this.state.heatingOn !== null) {
       this.keepTemperature();
+      if (this.runOnlyOnce) setTimeout(() => this.comm.closeConnections(), 1000);
     }
   }
 
@@ -99,7 +99,7 @@ class Thermostat {
   keepTemperature() {
     try {
       this.state.desiredTemperature = this.getDesiredTemperature();
-      logD(`keepTemp@ ${this.state.desiredTemperature} ` +
+      this.comm.logDebug(`keepTemp@ ${this.state.desiredTemperature} ` +
         `(${this.state.currentTemperatureProgramName}), ` +
         `cTemp=${this.state.currentTemperature}, ` +
         `heatingOn=${this.state.heatingOn}, ` +
@@ -120,13 +120,10 @@ class Thermostat {
       ) {
         this.comm.toggleHeating(false);
       }
-
       this.logState();
     } catch (err) {
       this.comm.logError('keepTemperature RUN error', err);
     }
-
-    if (this.runOnlyOnce) setTimeout(() => this.comm.closeConnections(), 1000);
   }
 }
 

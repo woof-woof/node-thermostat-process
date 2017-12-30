@@ -67,6 +67,10 @@ class CommunicationInterface {
     console.warn(title, error);
   }
 
+  logDebug(...args) {
+    console.log(...args);
+  }
+
   /**
    * @IMPLEMENT
    */
@@ -75,14 +79,16 @@ class CommunicationInterface {
   }
 
 
-  // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
+  /**
+   *******************************
+   * Following 'private' methods *
+   *******************************
+   */
   constructor() {
     this.events = new CommunicationEmitter();
   }
 
-  // ////////////
-  //  EVENTS ///
-  // ///////////
+  // EVENTS
   _heatingStateUpdate(state) {
     this.events.emit('heatingStateChanged', state);
   }
