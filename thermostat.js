@@ -9,31 +9,35 @@ const PATHS_CFG = require('./config/paths');
 
 class Thermostat {
   // SETUP
-  constructor() {
+  constructor(runOnlyOnce = true) {
     this.state = {
       currentTemperature: null,
       desiredTemperature: 14,
       lastTemperatureUpdate: null,
       currentTemperatureProgramName: null,
-      heatingOn: false,
+      heatingOn: null,
       someoneIsHome: false,
     };
+    this.runOnlyOnce = runOnlyOnce;
     this.comm = communication;
     this.config = {};
     this.loadConfig();
     this.bindCommunication();
     this.startRoutines();
+    if (this.runOnlyOnce) this.tryKeepTemperature();
   }
 
   bindCommunication() {
     this.comm.events.on('heatingStateChanged', (state) => {
       this.state.heatingOn = state;
       logD('heating is', state);
+      if (this.runOnlyOnce) this.tryKeepTemperature();
     });
     this.comm.events.on('temperatureChanged', (temp, lastUpdate) => {
       this.state.currentTemperature = temp;
       this.state.lastTemperatureUpdate = lastUpdate;
       logD('temp is', temp, 'updated', lastUpdate);
+      if (this.runOnlyOnce) this.tryKeepTemperature();
     });
     this.comm.events.on('someoneIsHomeUpdate', (state) => {
       this.state.someoneIsHome = state;
@@ -42,15 +46,17 @@ class Thermostat {
 
   startRoutines() {
     this.requestInfo();
+    if (this.runOnlyOnce) return;
+
     this._requestInfoIntreval = setInterval(this.requestInfo.bind(this), this.config.readInterval);
-    this.requestInfo();
     this._keepTempInterval = setInterval(
       this.keepTemperature.bind(this),
       this.config.keepTempInterval,
     );
-    setTimeout(this.keepTemperature.bind(this), 3000);
+    setTimeout(this.keepTemperature.bind(this), 60000);
   }
   // END OF SETUP
+
 
   loadConfig() {
     this.config = yaml.safeLoad(fs.readFileSync(path.join(__dirname, PATHS_CFG.HEATING_CONFIG), 'utf8'));
@@ -71,7 +77,7 @@ class Thermostat {
     return res.temperature;
   }
 
-  /*
+  /**
    * Log state to state file & call communication logState
    */
   logState() {
@@ -80,6 +86,14 @@ class Thermostat {
     this.comm.logState(state);
   }
 
+  /**
+   * calls keepTemperature only if currentTemperature & heatingOn are availalbe
+   */
+  tryKeepTemperature() {
+    if (this.state.currentTemperature !== null && this.state.heatingOn !== null) {
+      this.keepTemperature();
+    }
+  }
 
   // temp-keeping routine
   keepTemperature() {
@@ -93,7 +107,8 @@ class Thermostat {
 
       // maintain target temperature
       if (!this.state.currentTemperature) {
-        return this.comm.logError('Temperature not yet available');
+        this.comm.logError('Temperature not yet available');
+        return;
       } else if (
         !this.state.heatingOn &&
         this.state.currentTemperature < this.state.desiredTemperature - this.config.lowThreshold
@@ -101,18 +116,19 @@ class Thermostat {
         this.comm.toggleHeating(true);
       } else if (
         this.state.heatingOn &&
-        this.state.currentTemperature > this.state.desiredTemperature + this.config.highThreshold) {
+        this.state.currentTemperature > this.state.desiredTemperature + this.config.highThreshold
+      ) {
         this.comm.toggleHeating(false);
       }
 
       this.logState();
     } catch (err) {
       this.comm.logError('keepTemperature RUN error', err);
-      return false;
     }
-    return true;
+
+    if (this.runOnlyOnce) this.comm.closeConnections();
   }
 }
 
 
-module.exports = new Thermostat();
+module.exports = Thermostat;

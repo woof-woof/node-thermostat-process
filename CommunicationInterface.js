@@ -67,6 +67,13 @@ class CommunicationInterface {
     console.warn(title, error);
   }
 
+  /**
+   * @IMPLEMENT
+   */
+  closeConnections() {
+
+  }
+
 
   // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
   constructor() {
